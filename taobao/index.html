@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>淘宝案例</title>
+	<link rel="stylesheet" href="css/index.css"/>
+</head>
+<body>
+	<div class="app" id="app">
+		<div class="order">
+			<span>综合</span>
+			<span class="choose">人气</span>
+			<span class="order-sale-num">销量</span>
+			<span>信用</span>
+			<span class="order-price">价格从低到高</span>
+			<span class="order-price-reverse">价格从高到低</span>
+			<span class="order-price-filter">
+				<input type="text" class="price-min">
+				<i>-</i>
+				<input type="text" class="price-max">
+				<em>确定</em>
+			</span>
+		</div>
+		<div class="list"></div>
+	</div>
+	<!-- 模板 -->
+	<script type="text/template" id="tpl">
+		<div class="container">
+			<div class="img-container">
+				<img src="<%=src%>" alt="">
+				<div class="layer"><span>变速箱类型:自动</span><span>销售区域:贵州省</span></div>
+			</div>
+			<div class="info">
+				<span class="price">¥<%=price%></span>
+				<span class="mail <%=mail ? 'show' : 'hide'%>">包邮</span>
+				<span class="sale"><%=sale%>人付款</span>
+			</div>
+			<div class="title"><%=title%></div>
+			<div class="info"><span class="store"><%=store%></span><span class="address"><%=address%></span></div>
+		</div>
+	</script>
+	<script type="text/javascript" src='lib/jquery.js'></script>
+	<script type="text/javascript" src='lib/underscore.js'></script>
+	<script type="text/javascript" src='lib/backbone.js'></script>
+	<script type="text/javascript">
+	var ProductData = Backbone.Model.extend();
+	// 定义视图
+	var ProductView = Backbone.View.extend({
+		// 定义事件
+		events: {
+			// 鼠标移入显示浮层
+			'mouseenter .img-container': 'showLayer',
+			// 鼠标移出隐藏浮层
+			'mouseleave .img-container': 'hideLayer',
+			// 点击销量排序
+			'click .order-sale-num': 'dealSaleNum',
+			// 点击价格排序
+			'click .order-price': 'dealPrice',
+			// 价格从高到低
+			'click .order-price-reverse': 'dealPriceReverse',
+			// 点击确认进行过滤
+			'click .order-price-filter em': 'dealPriceFilter'
+		},
+		dealPriceFilter: function (e) {
+			var maxDom = this.$el.find('.price-max');
+			var maxNum = +maxDom.val() || Infinity;
+			var minDom = this.$el.find('.price-min');
+			var minNum = +minDom.val() || 0;
+			var result = this.collection.filter(function (model) {
+				if (minNum > maxNum) {
+					return +model.get('price') >= minNum;
+				}
+				return +model.get('price') >= minNum && +model.get('price') <= maxNum;
+			})
+			this.renderAll(result)
+		},
+		toggleBtn: function (e) {
+			$(e.target).addClass('choose').siblings().removeClass('choose');
+		},
+		dealSaleNum: function (e) {
+			this.toggleBtn(e)
+			var result = this.collection.sortBy(function (model, index, models) {
+				return -model.get('sale')
+			})
+			this.renderAll(result)
+		},
+		dealPrice: function (e) {
+			this.toggleBtn(e)
+			var result = this.collection.sortBy(function (model, index) {
+				return +model.get('price')
+			})
+			this.renderAll(result)
+		},
+		dealPriceReverse: function (e) {
+			this.toggleBtn(e)
+			var result = this.collection.sortBy(function (model) {
+				return -model.get('price');
+			})
+			this.renderAll(result);
+		},
+		showLayer: function (e) {
+			this.$(e.currentTarget).find('.layer').stop(true, true).animate({bottom: 0}, 100)
+		},
+		hideLayer: function (e) {
+			this.$(e.currentTarget).find('.layer').stop(true, true).animate({bottom: -30}, 100)
+		},
+		tpl: _.template($('#tpl').text()),
+		initialize: function () {
+			this.listenTo(this.collection, 'add', function (model, collection) {
+				this.render(model)
+			})
+		},
+		/**
+		 * 定义render方法
+		 * @model	模型实例化对象
+		 **/ 
+		render: function (model) {
+			var dom = this.$el.find('.list');
+			var data = model.toJSON()
+			var tpl = this.tpl;
+			var html = tpl(data)
+			dom.append(html);
+		},
+		renderAll: function(models) {
+			var dom = this.$el.find('.list');
+			var tpl = this.tpl;
+			var html = '';
+			models.forEach(function (model, index) {
+				var data = model.toJSON();
+				html += tpl(data);
+			})
+			dom.html(html);
+		}
+	})
+	// 定义集合
+	var ProductCollection = Backbone.Collection.extend({
+		model: ProductData,
+		url: 'data/product.json'
+	})
+	// 实例化
+	var pv = new ProductView({
+		el: $('#app'),
+		collection: new ProductCollection()
+	})
+	// 请求数据
+	pv.collection.fetch({
+		success: function (collection, res) {
+			console.log(111)
+		}
+	})
+	</script>
+</body>
+</html>
